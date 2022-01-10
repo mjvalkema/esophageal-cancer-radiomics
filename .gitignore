@@ -1,3 +1,11 @@
+# Folders to ignore
+/data
+/figures_mu
+/output_mu
+/figures_extval
+/output_extval
+/output
+
 # History files
 .Rhistory
 .Rapp.history
