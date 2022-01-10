@@ -2,7 +2,7 @@
 # Authors: M.J. Valkema, L.R. de Ruiter, January 2022
 
 ################# Initialization ###################
-setwd(dir="/Users/Maartje/ExtVal")
+setwd(dir=getwd())
 source('DataPrepExtVal.R') # use script DataPrepExtVal to get the  dataset dataAll: 
 library(rms) # to create calibration
 library(devtools)

@@ -1,9 +1,9 @@
 # Data preparation script: conbining development cohort with external validation cohort
 # Authors: M.J. Valkema, L.R. de Ruiter, January 2022
 
+################# Initialization ###################
 rm(list=ls()) # clear global environment
-setwd(dir="/Users/Maartje/ExtVal")
-getwd()
+setwd(dir=getwd())
 library(dplyr)
 library(car) # for recoding
 

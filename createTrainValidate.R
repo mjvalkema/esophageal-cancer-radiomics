@@ -2,7 +2,7 @@
 # Authors: M.J. Valkema, L.R. de Ruiter, January 2022, based on scripts created by A. Chatterjee.
 
 ################# Initialization ###################
-setwd(dir="/Users/Maartje/ExtVal") 
+setwd(dir=getwd())
 source('DataPrepModUpdating.R')# allData - this is the standardized data you use in this scrpt, available from DataPrepModUpdating.R
 library(caret)
 library(rms)

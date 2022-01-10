@@ -1,7 +1,8 @@
 # Data preparation for model updating
 # Authors: M.J. Valkema, L.R. de Ruiter, January 2022
 
-setwd(dir="/Users/Maartje/ExtVal")
+################# Initialization ###################
+setwd(dir=getwd())
 library(car) # for recoding
 library(ggpubr) # for ggarrange
 
