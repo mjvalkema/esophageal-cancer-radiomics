@@ -6,6 +6,7 @@
 /output_extval
 /output
 .DS_Store
+.ipynb_checkpoints/
 
 # History files
 .Rhistory
