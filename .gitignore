@@ -5,6 +5,7 @@
 /figures_extval
 /output_extval
 /output
+.DS_Store
 
 # History files
 .Rhistory
