@@ -5,8 +5,9 @@ Project radiomics for esophageal cancer patients
 1. DataPrepExtVal.R 
 2. ExternalValidation.R
 3. DataPrepModUpdating.R
-4. createTrainValidate.R
-5. RandomForest.ipynb
+4. LASSO.R
+5. modelExtension.R
+6. RandomForest.ipynb
 
 ## Utilities
 - ROCPlot.R
