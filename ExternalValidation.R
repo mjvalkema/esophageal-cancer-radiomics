@@ -1,5 +1,5 @@
 # External validation script
-# Authors: M.J. Valkema, L.R. de Ruiter, January 2022
+# Authors: M.J. Valkema, L.R. de Ruiter, April 2022
 
 ################# Initialization ###################
 setwd(dir=getwd())
@@ -12,7 +12,7 @@ library(dplyr)
 library(ggplot2)
 library(ggpubr) # for function ggarrange
 library(car) # for recoding
-colors <- c("#4E79A7","#F28E2B", "#E15759") # for colors in figures
+colors <- c("#4E79A7","#F28E2B", "#E15759", "#76b7b2") # for colors in figures
 
 # Baseline characteristics using dataAll of the script DataPrepExtVal
 library(tableone)
@@ -29,6 +29,10 @@ chisq.test(table(dataAll$Histology, dataAll$id))
 chisq.test(table(dataAll$cT, dataAll$id))
 chisq.test(table(dataAll$cN_grouped, dataAll$id))
 chisq.test(table(dataAll$outcome, dataAll$id))
+# Comparison of proportion patients with TRG 1 out of patients with cT3-4a for development and ext. validation cohort respectively
+prop.test(x = c(9, 28), n = c(64, 141))
+# Comparison of proportion patients with TRG 1 out of patients with c1-2 for development and ext. validation cohort respectively
+prop.test(x = c(7, 12), n = c(9, 41))
 
 # Describe scan parameters for the external validation cohort
 tableScannerTypes <- table(dataAll$ManufacturerModelName, dataAll$Manufacturer)
@@ -115,9 +119,7 @@ outcome <- "TRG1_TRG234"
 features <- c("id", columnsOfInterest, "cT", "TRG")
 
 # Choose the data
-#model_data <- dataAll[dataAll$id == "Development cohort", c(features, outcome)] # only development cohort
 model_data <- dataAll[dataAll$id == "External validation cohort", c(features, outcome)] # only external validation cohort
-#model_data <- dataAll[(dataAll$id == "External validation cohort" & dataAll$Manufacturer == "Siemens"), c(features, outcome)] # to test for one vendor
 
 ### Visualize the data ###
 # Boxplots to take a glance at the normalized features for the TRG outcomes
@@ -183,6 +185,9 @@ ApplyModel <- function(data, coefficients, radiomics_feature_name) {
 }
 
 metrics <- c("threshold", "youden", "sensitivity", "specificity", "ppv", "npv", "accuracy")
+
+# Choose how metrics are collected: at maximized Youden's index, at sensitivity 90% (preSANO trial), or show at all thresholds
+# Maximum Youden's index
 CollectMetrics <- function(true_labels, probabilities, model_name) {
   roc_object <- roc(true_labels, probabilities)
   ci.auc(roc_object, method = "bootstrap")
@@ -192,10 +197,31 @@ CollectMetrics <- function(true_labels, probabilities, model_name) {
   return(coords)
 }
 
+# At 90% sensitivity
+CollectMetrics <- function(true_labels, probabilities, model_name) {
+  roc_object <- roc(true_labels, probabilities)
+  ci.auc(roc_object, method = "bootstrap")
+  coords <- coords(roc_object, x=0.90, input = "sensitivity", transpose=FALSE, ret = metrics)
+  coords$AUC <-roc_object$auc[1]
+  coords$model <- model_name
+  return(coords)
+}
+
+# See what the output is when all thresholds are shown
+CollectMetrics <- function(true_labels, probabilities, model_name) {
+  roc_object <- roc(true_labels, probabilities)
+  ci.auc(roc_object, method = "bootstrap")
+  coords <- coords(roc_object, "all", transpose=FALSE, ret = metrics)
+  coords$AUC <-roc_object$auc[1]
+  coords$model <- model_name
+  return(coords)
+}
+
 # Further define the data
 model_data1 <- dataAll[dataAll$id == "Development cohort", c(features, outcome)] # only Groningen cohort
 model_data2 <- dataAll[dataAll$id == "External validation cohort", c(features, outcome)] # only external validation cohort
 model_data3 <- dataAll[(dataAll$id == "External validation cohort" & dataAll$Manufacturer == "Siemens"), c(features, outcome)] # to test for one vendor
+model_data4 <- dataAll[(dataAll$id == "External validation cohort" & dataAll$Histology == "AC"), c(features, outcome)] # to test for adenocarcinoma
 
 # Apply models: calculate probabilities for the development Groningen cohort
 model_data1$probabilityA <- ApplyModel(model_data1, coefficients$A, columnsOfInterest[1])
@@ -220,6 +246,14 @@ model_data3$probabilityC <- ApplyModel(model_data3, coefficients$C, columnsOfInt
 model_data3$probabilityD <- ApplyModel(model_data3, coefficients$D, columnsOfInterest[4])
 model_data3$probabilityE <- ApplyModel(model_data3, coefficients$E, columnsOfInterest[5])
 model_data3$probabilityF <- ApplyModel(model_data3, coefficients$F, columnsOfInterest[6])
+
+# Apply models: calculate probabilities for the external validation cohort, adenocarcinoma only
+model_data4$probabilityA <- ApplyModel(model_data4, coefficients$A, columnsOfInterest[1])
+model_data4$probabilityB <- ApplyModel(model_data4, coefficients$B, columnsOfInterest[2])
+model_data4$probabilityC <- ApplyModel(model_data4, coefficients$C, columnsOfInterest[3])
+model_data4$probabilityD <- ApplyModel(model_data4, coefficients$D, columnsOfInterest[4])
+model_data4$probabilityE <- ApplyModel(model_data4, coefficients$E, columnsOfInterest[5])
+model_data4$probabilityF <- ApplyModel(model_data4, coefficients$F, columnsOfInterest[6])
 
 # Collect metrics: save all the performance metrics in one table
 # Do for development cohort
@@ -270,44 +304,60 @@ is.num <- sapply(tabelSum3, is.numeric)
 tabelSum3[is.num] <- lapply(tabelSum3[is.num], round, 2)
 write.csv(tabelSum3, file = "output_extval/tabelSum3_extvalcohort_onlySIEMENS.csv")
 
-# Make ROCs in one figure for development cohort en external validation cohort (+ Siemens at bottom script, Supplementary Material)
+# Do for external validation cohort with only adenocarcinoma patients
+tabelSum4 <- CollectMetrics(model_data4$TRG1_TRG234, model_data4$probabilityA, "A")
+coords <- CollectMetrics(model_data4$TRG1_TRG234, model_data4$probabilityB, "B")
+tabelSum4 <- dplyr::bind_rows(tabelSum4, coords)
+coords <- CollectMetrics(model_data4$TRG1_TRG234, model_data4$probabilityC, "C")
+tabelSum4 <- dplyr::bind_rows(tabelSum4, coords)
+coords <- CollectMetrics(model_data4$TRG1_TRG234, model_data4$probabilityD, "D")
+tabelSum4 <- dplyr::bind_rows(tabelSum4, coords)
+coords <- CollectMetrics(model_data4$TRG1_TRG234, model_data4$probabilityE, "E")
+tabelSum4 <- dplyr::bind_rows(tabelSum4, coords)
+coords <- CollectMetrics(model_data4$TRG1_TRG234, model_data4$probabilityF, "F")
+tabelSum4 <- dplyr::bind_rows(tabelSum4, coords)
+is.num <- sapply(tabelSum4, is.numeric)
+tabelSum4[is.num] <- lapply(tabelSum4[is.num], round, 2)
+write.csv(tabelSum4, file = "output_extval/tabelSum4_extvalcohort_onlyAC.csv")
+
+# Make ROCs in one figure for development cohort en external validation cohort (+ Siemens and AC at bottom script, Supplementary Material)
 png(filename = "figures_extval/ROCs_develop_extval.png", units = "cm", width=22, height=17, res=600)
 par(mfrow = c(2, 3))
 ROCPlot(model_data1$probabilityA, model_data1$TRG1_TRG234, col=colors[1], main = "A")
 ROCPlot(model_data2$probabilityA, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[1], sep=" "), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[1], sep=" ")), 
+       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[1]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[1])), 
        col = colors, lty = 1)
 ROCPlot(model_data1$probabilityB, model_data1$TRG1_TRG234, col=colors[1], main = "B")
 ROCPlot(model_data2$probabilityB, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[2], sep=" "), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[2], sep=" ")), 
+       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[2]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[2])), 
        col = colors, lty = 1)
 ROCPlot(model_data1$probabilityC, model_data1$TRG1_TRG234, col=colors[1], main = "C")
 ROCPlot(model_data2$probabilityC, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[3], sep=" "), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[3], sep=" ")), 
+       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[3]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[3])), 
        col = colors, lty = 1)
 ROCPlot(model_data1$probabilityD, model_data1$TRG1_TRG234, col=colors[1], main = "D")
 ROCPlot(model_data2$probabilityD, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[4], sep=" "), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[4], sep=" ")), 
+       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[4]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[4])), 
        col = colors, lty = 1)
 ROCPlot(model_data1$probabilityE, model_data1$TRG1_TRG234, col=colors[1], main = "E")
 ROCPlot(model_data2$probabilityE, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[5], sep=" "), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[5], sep=" ")), 
+       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[5]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[5])), 
        col = colors, lty = 1)
 ROCPlot(model_data1$probabilityF, model_data1$TRG1_TRG234, col=colors[1], main = "F")
 ROCPlot(model_data2$probabilityF, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[6], sep=" "), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[6], sep=" ")), 
+       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[6]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[6])), 
        col = colors, lty = 1)
 
 dev.off()
@@ -315,22 +365,26 @@ dev.off()
 
 ##### Calibration #####
 # For the development cohort
+png(filename = "figures_extval/calplot_dev.png", units = "cm", width=22, height=17, res=600)
 par(mfrow = c(2, 3))
-cal <- val.prob.ci.2(y = model_data1$TRG1_TRG234, p = model_data1$probabilityA, smooth = "loess", CL.smooth=TRUE, d1lab="1")
-val.prob.ci.2(y = model_data1$TRG1_TRG234, p = model_data1$probabilityB, smooth = "loess", CL.smooth=TRUE)
-val.prob.ci.2(y = model_data1$TRG1_TRG234, p = model_data1$probabilityC, smooth = "loess", CL.smooth=TRUE)
-val.prob.ci.2(y = model_data1$TRG1_TRG234, p = model_data1$probabilityD, smooth = "loess", CL.smooth=TRUE)
-val.prob.ci.2(y = model_data1$TRG1_TRG234, p = model_data1$probabilityE, smooth = "loess", CL.smooth=TRUE)
-val.prob.ci.2(y = model_data1$TRG1_TRG234, p = model_data1$probabilityF, smooth = "loess", CL.smooth=TRUE)
+val.prob.ci.2(y = model_data1$TRG1_TRG234, p = model_data1$probabilityA, smooth = "loess", CL.smooth=TRUE, main = "A")
+val.prob.ci.2(y = model_data1$TRG1_TRG234, p = model_data1$probabilityB, smooth = "loess", CL.smooth=TRUE, main = "B")
+val.prob.ci.2(y = model_data1$TRG1_TRG234, p = model_data1$probabilityC, smooth = "loess", CL.smooth=TRUE, main = "C")
+val.prob.ci.2(y = model_data1$TRG1_TRG234, p = model_data1$probabilityD, smooth = "loess", CL.smooth=TRUE, main = "D")
+val.prob.ci.2(y = model_data1$TRG1_TRG234, p = model_data1$probabilityE, smooth = "loess", CL.smooth=TRUE, main = "E")
+val.prob.ci.2(y = model_data1$TRG1_TRG234, p = model_data1$probabilityF, smooth = "loess", CL.smooth=TRUE, main = "F")
+dev.off()
 
 # For the external validation cohort
+png(filename = "figures_extval/calplot_extval.png", units = "cm", width=22, height=17, res=600)
 par(mfrow = c(2, 3))
-val.prob.ci.2(y = model_data2$TRG1_TRG234, p = model_data2$probabilityA, smooth = "loess", CL.smooth=TRUE)
-val.prob.ci.2(y = model_data2$TRG1_TRG234, p = model_data2$probabilityB, smooth = "loess", CL.smooth=TRUE)
-val.prob.ci.2(y = model_data2$TRG1_TRG234, p = model_data2$probabilityC, smooth = "loess", CL.smooth=TRUE)
-val.prob.ci.2(y = model_data2$TRG1_TRG234, p = model_data2$probabilityD, smooth = "loess", CL.smooth=TRUE)
-val.prob.ci.2(y = model_data2$TRG1_TRG234, p = model_data2$probabilityE, smooth = "loess", CL.smooth=TRUE)
-val.prob.ci.2(y = model_data2$TRG1_TRG234, p = model_data2$probabilityF, smooth = "loess", CL.smooth=TRUE)
+val.prob.ci.2(y = model_data2$TRG1_TRG234, p = model_data2$probabilityA, smooth = "loess", CL.smooth=TRUE, main = "A")
+val.prob.ci.2(y = model_data2$TRG1_TRG234, p = model_data2$probabilityB, smooth = "loess", CL.smooth=TRUE, main = "B")
+val.prob.ci.2(y = model_data2$TRG1_TRG234, p = model_data2$probabilityC, smooth = "loess", CL.smooth=TRUE, main = "C")
+val.prob.ci.2(y = model_data2$TRG1_TRG234, p = model_data2$probabilityD, smooth = "loess", CL.smooth=TRUE, main = "D")
+val.prob.ci.2(y = model_data2$TRG1_TRG234, p = model_data2$probabilityE, smooth = "loess", CL.smooth=TRUE, main = "E")
+val.prob.ci.2(y = model_data2$TRG1_TRG234, p = model_data2$probabilityF, smooth = "loess", CL.smooth=TRUE, main = "F")
+dev.off()
 
 # Make histograms
 # For the development cohort
@@ -340,7 +394,7 @@ hist(model_data1$probabilityA, breaks = 30, xlab = "Predicted probability",
      ylim = c(0,100),
      xlim = c(0, 1),
      main="A", col = colors[1])
-abline(v = tabelSum1$threshold[1], col = colors[1])
+abline(v = tabelSum1$threshold[1], col = colors[1]) # threshold is chosen to get 90% sensitivity
 hist(model_data1$probabilityB, breaks = 30, xlab = "Predicted probability",
      ylim = c(0,100),
      xlim = c(0, 1),
@@ -369,92 +423,113 @@ abline(v = tabelSum1$threshold[6], col = colors[1])
 dev.off()
 
 # For the external validation cohort
+# thresholds were determined using threshold at 90% sensitivity
 png(filename = "figures_extval/Histall_externalvalidation.png", units = "cm", width=22, height=14, res=600)
 par(mfrow = c(2, 3))
 hist(model_data2$probabilityA, breaks = 30, xlab = "Predicted probability",
      ylim = c(0,150),
      xlim = c(0, 1),
      main="A", col = colors[1])
-abline(v = tabelSum2$threshold[1], col = colors[1])
+abline(v = 0.53, col = colors[1])
 hist(model_data2$probabilityB, breaks = 30, xlab = "Predicted probability",
      ylim = c(0,150),
      xlim = c(0, 1),
      main="B", col = colors[1])
-abline(v = tabelSum2$threshold[2], col = colors[1])
+abline(v = 0.58, col = colors[1])
 hist(model_data2$probabilityC, breaks = 30, xlab = "Predicted probability",
      ylim = c(0,150),
      xlim = c(0, 1),
      main="C", col = colors[1])
-abline(v = tabelSum2$threshold[3], col = colors[1])
+abline(v = 0.64, col = colors[1])
 hist(model_data2$probabilityD, breaks = 30, xlab = "Predicted probability",
      ylim = c(0,150),
      xlim = c(0, 1),
      main="D", col = colors[1])
-abline(v = tabelSum2$threshold[4], col = colors[1])
+abline(v = 0.18, col = colors[1])
 hist(model_data2$probabilityE, breaks = 30, xlab = "Predicted probability",
      ylim = c(0,150),
      xlim = c(0, 1),
      main="E", col = colors[1])
-abline(v = tabelSum2$threshold[5], col = colors[1])
+abline(v = 0.12, col = colors[1])
 hist(model_data2$probabilityF, breaks = 30, xlab = "Predicted probability",
      ylim = c(0,150),
      xlim = c(0, 1),
      main="F", col = colors[1])
-abline(v = tabelSum2$threshold[6], col = colors[1])
+abline(v = 0.75, col = colors[1])
 dev.off()
 
-# ROCs with the three model_data's
+# Check relation between predicted probabilities and cT stage
+table(model_data2$probabilityA > 0.8, model_data2$cT)
+table(model_data2$probabilityB > 0.8, model_data2$cT)
+table(model_data2$probabilityC > 0.8, model_data2$cT)
+table(model_data2$probabilityD > 0.8, model_data2$cT)
+table(model_data2$probabilityE > 0.6, model_data2$cT)
+table(model_data2$probabilityF > 0.9, model_data2$cT)
+
+# ROCs with the three model_data's, development cohort, external validation cohort, external validation cohort of one vendor,
+# and external validation cohort only adenocarcinoma patients
 # Make ROCs in one figure
-colors <- c("#4E79A7","#F28E2B", "#E15759")
-png(filename = "figures_extval/ROCall.png", units = "cm", width=22, height=17, res=900)
+png(filename = "figures_extval/ROCs_subgroups.png", units = "cm", width=26, height=17, res=900)
 par(mfrow = c(2, 3))
 ROCPlot(model_data1$probabilityA, model_data1$TRG1_TRG234, col=colors[1], main = "A")
 ROCPlot(model_data2$probabilityA, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 ROCPlot(model_data3$probabilityA, model_data3$TRG1_TRG234, col=colors[3], add = TRUE)
+ROCPlot(model_data4$probabilityA, model_data4$TRG1_TRG234, col=colors[4], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[1], sep=" "), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[1], sep=" "), 
-                  paste("Ext.val., one vendor,", "AUC:", tabelSum3$AUC[1], sep=" ")), 
+       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[1]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[1]), 
+                  paste("Ext.val., one vendor,", "AUC:", tabelSum3$AUC[1]),
+                  paste("Ext.val., adeno.,", "AUC:", tabelSum4$AUC[1])), 
        col = colors, lty = 1)
 ROCPlot(model_data1$probabilityB, model_data1$TRG1_TRG234, col=colors[1], main = "B")
 ROCPlot(model_data2$probabilityB, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 ROCPlot(model_data3$probabilityB, model_data3$TRG1_TRG234, col=colors[3], add = TRUE)
+ROCPlot(model_data4$probabilityB, model_data4$TRG1_TRG234, col=colors[4], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[2], sep=" "), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[2], sep=" "), 
-                  paste("Ext.val., one vendor,", "AUC:", tabelSum3$AUC[2], sep=" ")), 
+       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[2]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[2]), 
+                  paste("Ext.val., one vendor,", "AUC:", tabelSum3$AUC[2]),
+                  paste("Ext.val., adeno.,", "AUC:", tabelSum4$AUC[2])), 
        col = colors, lty = 1)
 ROCPlot(model_data1$probabilityC, model_data1$TRG1_TRG234, col=colors[1], main = "C")
 ROCPlot(model_data2$probabilityC, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 ROCPlot(model_data3$probabilityC, model_data3$TRG1_TRG234, col=colors[3], add = TRUE)
+ROCPlot(model_data4$probabilityC, model_data4$TRG1_TRG234, col=colors[4], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[3], sep=" "), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[3], sep=" "), 
-                  paste("Ext.val., one vendor,", "AUC:", tabelSum3$AUC[3], sep=" ")), 
+       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[3]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[3]), 
+                  paste("Ext.val., one vendor,", "AUC:", tabelSum3$AUC[3]),
+                  paste("Ext.val., adeno.,", "AUC:", tabelSum4$AUC[3])), 
        col = colors, lty = 1)
 ROCPlot(model_data1$probabilityD, model_data1$TRG1_TRG234, col=colors[1], main = "D")
 ROCPlot(model_data2$probabilityD, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 ROCPlot(model_data3$probabilityD, model_data3$TRG1_TRG234, col=colors[3], add = TRUE)
+ROCPlot(model_data4$probabilityD, model_data4$TRG1_TRG234, col=colors[4], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[4], sep=" "), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[4], sep=" "), 
-                  paste("Ext.val., one vendor,", "AUC:", tabelSum3$AUC[4], sep=" ")), 
+       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[4]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[4]), 
+                  paste("Ext.val., one vendor,", "AUC:", tabelSum3$AUC[4]),
+                  paste("Ext.val., adeno.,", "AUC:", tabelSum4$AUC[4])), 
        col = colors, lty = 1)
 ROCPlot(model_data1$probabilityE, model_data1$TRG1_TRG234, col=colors[1], main = "E")
 ROCPlot(model_data2$probabilityE, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 ROCPlot(model_data3$probabilityE, model_data3$TRG1_TRG234, col=colors[3], add = TRUE)
+ROCPlot(model_data4$probabilityE, model_data4$TRG1_TRG234, col=colors[4], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[5], sep=" "), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[5], sep=" "), 
-                  paste("Ext.val., one vendor,", "AUC:", tabelSum3$AUC[5], sep=" ")), 
+       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[5]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[5]), 
+                  paste("Ext.val., one vendor,", "AUC:", tabelSum3$AUC[5]),
+                  paste("Ext.val., adeno.,", "AUC:", tabelSum4$AUC[5])), 
        col = colors, lty = 1)
 ROCPlot(model_data1$probabilityF, model_data1$TRG1_TRG234, col=colors[1], main = "F")
 ROCPlot(model_data2$probabilityF, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 ROCPlot(model_data3$probabilityF, model_data3$TRG1_TRG234, col=colors[3], add = TRUE)
+ROCPlot(model_data4$probabilityF, model_data4$TRG1_TRG234, col=colors[4], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[6], sep=" "), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[6], sep=" "), 
-                  paste("Ext.val., one vendor,", "AUC:", tabelSum3$AUC[6], sep=" ")), 
+       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[6]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[6]), 
+                  paste("Ext.val., one vendor,", "AUC:", tabelSum3$AUC[6]),
+                  paste("Ext.val., adeno.,", "AUC:", tabelSum4$AUC[6])), 
        col = colors, lty = 1)
-
+dev.off()
 dev.off()

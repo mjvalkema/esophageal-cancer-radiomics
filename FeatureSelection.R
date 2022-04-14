@@ -1,6 +1,6 @@
 # Source: Chatterjee et al.: Empirical approach for avoiding false discoveries when applying high-dimensional radiomics,
 # IEE transactions on radiation and plasma medical sciences, vol. 3, no.2, March 2019
-# Original code of above source rewritten by L.R. de Ruiter and M.J. Valkema, November 2021
+# Original code of above source rewritten by L.R. de Ruiter and M.J. Valkema, April 2022
 
 # N.B. The dataset  is split in a Training set (for developing) and Validation set (for internal validation). 
 # N.B. The nomenclature in the functions is Train:Test. For the current dataset, this means Train:Validate since an independent Test set was not available.
@@ -133,7 +133,7 @@ RadiomicsFeatureSelection <- function(features, outcomes) {
   # We use only the training set for selection of features, we don't use splits
   # Keep features based on threshold 1  
   # Drop features based on threshold 2
-  threshold1 <- 0.55 # median over 100 training sets should have at least AUC of 0.55
+  threshold1 <- 0.6 # median over 100 training sets should have at least AUC of 0.55
   threshold2 <- 0.7 # features cannot be correlated with each other > 0.7 (Pearson)
   
   correlationMatrix <- abs(cor(features[trainTestSplits$V2,])) #make correlation matrix for training set, e.g. split1

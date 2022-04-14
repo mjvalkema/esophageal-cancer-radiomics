@@ -1,5 +1,5 @@
 # Data preparation script: conbining development cohort with external validation cohort
-# Authors: M.J. Valkema, L.R. de Ruiter, January 2022
+# Authors: M.J. Valkema, L.R. de Ruiter, April 2022
 
 ################# Initialization ###################
 rm(list=ls()) # clear global environment

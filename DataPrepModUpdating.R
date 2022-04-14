@@ -1,5 +1,5 @@
 # Data preparation for model updating
-# Authors: M.J. Valkema, L.R. de Ruiter, January 2022
+# Authors: M.J. Valkema, L.R. de Ruiter, April 2022
 
 ################# Initialization ###################
 setwd(dir=getwd())
