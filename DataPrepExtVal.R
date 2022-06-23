@@ -1,5 +1,5 @@
 # Data preparation script: conbining development cohort with external validation cohort
-# Authors: M.J. Valkema, L.R. de Ruiter, April 2022
+# Authors: M.J. Valkema, L.R. de Ruiter, June 2022
 
 ################# Initialization ###################
 rm(list=ls()) # clear global environment
@@ -112,7 +112,7 @@ dataAll$id <- car::recode(dataAll$id, "c(1)='Development cohort'; c(2)='External
 dataAll$Gender <- car::recode(dataAll$Gender, "c(1)='Male'; c(2)='Female'")
 dataAll$cT_original <- as.factor(dataAll$cT)
 dataAll$cT <- car::recode(dataAll$cT, "c(1,2)='cT1-2'; c(3,4)='cT3-4a'")
-dataAll$cN_grouped <- car::recode(dataAll$cN, "c(0)='cN0'; c(1,2,3,9)='cN+'")
+dataAll$cN_grouped <- as.factor(car::recode(dataAll$cN, "c(0)='cN0'; c(1,2,3,9)='cN+'"))
 dataAll$cN <- car::recode(dataAll$cN, "c(9)='cNx'")
 dataAll$AcquisitionTime <- (dataAll$AcquisitionTime / 3600) # convert to minutes instead of seconds
 write.csv(dataAll, file = "output/dataAll.csv")

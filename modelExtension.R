@@ -1,5 +1,5 @@
 # Model extension / updating
-# Authors: M.J. Valkema, L.R. de Ruiter, April 2022, based on scripts created by A. Chatterjee.
+# Authors: M.J. Valkema, L.R. de Ruiter, June 2022, based on scripts created by A. Chatterjee.
 
 ################# Initialization ###################
 setwd(dir=getwd())
@@ -19,10 +19,10 @@ colors <- c("#4E79A7","#F28E2B", "#E15759")
 
 # Organise data and split into different types of data
 # For modeling
-outcomes <- allData[, "outcome"] # TRG 1-2 is 0, TRG 3-4 is 1
+#outcomes <- allData[, "outcome"] # TRG 1-2 is 0, TRG 3-4 is 1
+outcomes <- allData[, "TRG1_TRG234"] # TRG 1 is 0, TRG 2-3-4 is 1
 features <- allData[, 2:102] # all the normalized features without PatientID
 features <- features[, order(names(features))] # order alphabetically, so feature selection in correlation matrix is not dependent on order of features
-# For modeling
 clinical <- allData[, c('cT', 'cN_grouped', 'Gender', 'Age', 'Histology')]
 
 # N.B. The dataset  is split in a Training set (for developing) and Validation set (for internal validation). 
@@ -70,7 +70,8 @@ write.csv(modelData, "data/dataRandomForest.csv")
 metrics <- c("threshold", "youden", "sensitivity", "specificity", "ppv", "npv", "accuracy")
 
 # Logistic regression model
-featureNames <- names(modelFeatures)
+#featureNames <- names(modelFeatures)
+featureNames <- c(ranking$V1[1:2], names(clinical)) # limit number of features based on approximately 10 events per variable rule of thumb
 metricsArrayTrain <- array(NA, 
                            dim = c(100, length(metrics)), 
                            dimnames = list('split' = 1:100, 'metric' = metrics))
@@ -123,8 +124,6 @@ MetricsSummary <- function(obj) {
   return(out)
 }
 
-write.csv(MetricsSummary(metricsArrayTrain), "output_mu/metrics_train_LR.csv")
-write.csv(MetricsSummary(metricsArrayTest), "output_mu/metrics_test_LR.csv")
 summary(AUCTrain)
 round(quantile(AUCTrain, probs = c(0.025,0.975)), digits = 2)
 summary(AUCTest)
@@ -165,7 +164,7 @@ ggplot(data=dfSummary3[dfSummary3$metric %in% c("sensitivity", "specificity", "a
   theme(legend.position = c(0.98, 0.98), legend.justification = c("right", "top"), legend.box.just = "right", legend.margin = margin(2,4,4,4))
 dev.off()
 
-# Logistic regression model with outcome random - with 4 variables as chosen from LASSO
+# Logistic regression model with outcome random
 # - see if you are able to get a model whose AUC is better than random at 95% CI. If you cannot, it means the workflow is robust against false discovery. 
 featureNames <- names(modelFeatures)
 metricsArrayTrain <- array(NA, 
@@ -209,9 +208,6 @@ for (i in 1:ncol(trainTestSplits)) {
   
 }
 
-write.csv(MetricsSummary(metricsArrayTrain), "output_mu/metrics_train_LR_randomOutcome.csv")
-write.csv(MetricsSummary(metricsArrayTest), "output_mu/metrics_test_LR_randomOutcome.csv")
-
 summary(AUCTrain)
 summary(AUCTest)
 coefficients_array
@@ -245,8 +241,9 @@ for (i in 1:ncol(trainTestSplits)) {
   modelOutcomesTest <- as.factor(modelOutcomes[!split])
   
   # Apply model to training data, threshold is set at 0.5
+  # Class.weights function only applicable to outcome TRG 1 vs TRG 2-3-4
   formula <- as.formula(paste('modelOutcomesTrain ~', paste(featureNames, collapse = ' + ')))
-  model <- svm(formula, data = modelTrainData, kernel = "linear", cost = 1, scale = FALSE)
+  model <- svm(formula, data = modelTrainData, kernel = "linear", class.weights = c("0"= 3.5, "1" = 1), scale = FALSE)
   predTrain <- predict(model)
   roc_object<- roc(modelOutcomesTrain, as.numeric(as.character(predTrain)))
   metricsArrayTrain[i, ] <- coords(roc_object, x=0.5, transpose=FALSE, as.matrix = TRUE, ret = metrics)[1, ]
@@ -259,8 +256,6 @@ for (i in 1:ncol(trainTestSplits)) {
   AUCTest[i] <- auc(roc_object)
 }
 
-write.csv(MetricsSummary(metricsArrayTrain), "output_mu/metrics_train_SVM.csv")
-write.csv(MetricsSummary(metricsArrayTest), "output_mu/metrics_test_SVM.csv")
 summary(AUCTrain)
 round(quantile(AUCTrain, probs = c(0.025,0.975)), digits = 2)
 summary(AUCTest)
@@ -341,11 +336,6 @@ for (i in 1:ncol(trainTestSplits)) {
   AUCTest[i] <- auc(roc_object)
 }
 
-tab <- table(predTest$class, modelOutcomesTest)
-caret::confusionMatrix(tab) 
-
-write.csv(MetricsSummary(metricsArrayTrain), "output_mu/metrics_train_NBayes.csv")
-write.csv(MetricsSummary(metricsArrayTest), "output_mu/metrics_test_NBayes.csv")
 summary(AUCTrain)
 round(quantile(AUCTrain, probs = c(0.025,0.975)), digits = 2)
 summary(AUCTest)
@@ -371,6 +361,9 @@ dfSummary8
 
 dfSummary9 <- rbind(dfSummary7, dfSummary8)
 dfSummary9
+
+dfSummaryAll <- rbind(dfSummary3, dfSummary6, dfSummary9)
+write.csv(dfSummaryAll, "output_mu/metrics_allmodels.csv")
 
 png(filename = "figures_mu/NB_medianvalues_100.png", units = "cm", width=10, height=10, res=300)
 ggplot(data=dfSummary9[dfSummary9$metric %in% c("sensitivity", "specificity", "accuracy", "AUC"),], 

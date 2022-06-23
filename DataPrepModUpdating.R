@@ -1,5 +1,5 @@
 # Data preparation for model updating
-# Authors: M.J. Valkema, L.R. de Ruiter, April 2022
+# Authors: M.J. Valkema, L.R. de Ruiter, June 2022
 
 ################# Initialization ###################
 setwd(dir=getwd())
@@ -87,7 +87,7 @@ figure <- ggarrange(plotlist = figures,
 figure
 dev.off()
 
-
+# Standardize features per scanner model
 RadiomicsFeatureStandardization <- function(features) {
   library(caret)
   process <- preProcess(features, method=c("center", "scale")) # alternative is "range" between 0-1

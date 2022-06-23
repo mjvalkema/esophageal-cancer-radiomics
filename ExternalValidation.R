@@ -1,5 +1,5 @@
 # External validation script
-# Authors: M.J. Valkema, L.R. de Ruiter, April 2022
+# Authors: M.J. Valkema, L.R. de Ruiter, June 2022
 
 ################# Initialization ###################
 setwd(dir=getwd())
@@ -31,7 +31,7 @@ chisq.test(table(dataAll$cN_grouped, dataAll$id))
 chisq.test(table(dataAll$outcome, dataAll$id))
 # Comparison of proportion patients with TRG 1 out of patients with cT3-4a for development and ext. validation cohort respectively
 prop.test(x = c(9, 28), n = c(64, 141))
-# Comparison of proportion patients with TRG 1 out of patients with c1-2 for development and ext. validation cohort respectively
+# Comparison of proportion patients with TRG 1 out of patients with cT1-2 for development and ext. validation cohort respectively
 prop.test(x = c(7, 12), n = c(9, 41))
 
 # Describe scan parameters for the external validation cohort
@@ -138,13 +138,13 @@ BoxPlotColumn <- function (column, data, y_label) {
                 test = "wilcox.test", map_signif_level=TRUE, vjust = 0.4, tip_length = 0)
 }
 
-png(filename = "figures_extval/Boxplots_TRGvsOutcome.png", units = "cm", width=22, height=17, res=300)
+png(filename = "figures_extval/Boxplots_TRGvsOutcome.png", units = "cm", width=17.4, height=15, res=300)
 figures <- list()
 for (i in 1:length(columnsOfInterest)) {
   figures[[i]] <- BoxPlotColumn(columnsOfInterest[i], model_data, columnsOfInterestLabels[i])
 }
 figure <- ggarrange(plotlist = figures,
-                    labels = c("A", "B", "C", "D", "E", "F"),
+                    #labels = c("A", "B", "C", "D", "E", "F"),
                     ncol =3, nrow =2,
                     common.legend= TRUE, 
                     legend = "bottom")
