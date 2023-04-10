@@ -5,6 +5,7 @@
 setwd(dir=getwd())
 library(car) # for recoding
 library(ggpubr) # for ggarrange
+colors <- c("#4E79A7","#F28E2B", "#E15759", "#76B7B2", "#59A14F", "#EDC948", "#B07AA1") # Tableau colors
 
 # use dataAll from DataPrepExtVal
 source('DataPrepExtVal.R')
@@ -135,6 +136,16 @@ figure <- ggarrange(plotlist = figures,
                     common.legend= TRUE, 
                     legend = "bottom")
 figure
+dev.off()
+
+# Example to illustrate effect of scanner-specific standardization (datStandard vs standardizedFeatures)
+png(filename = "figures_mu/DensityPlot_Manufacturer_WithoutScannerSpecificStandardization.png", units = "cm", width=17, height=10, res=300)
+ggplot(datStandard, aes(x=joint_maximum_3D_comb, color = ManufacturerModelName)) + geom_density() + 
+  scale_color_manual(values=colors) + theme_classic()
+dev.off()
+png(filename = "figures_mu/DensityPlot_Manufacturer_WithScannerSpecificStandardization.png", units = "cm", width=17, height=10, res=300)
+ggplot(standardizedFeatures, aes(x=joint_maximum_3D_comb, color = ManufacturerModelName)) + geom_density() + 
+  scale_color_manual(values=colors) + theme_classic()
 dev.off()
 
 # Normalize using Combat Harmonization, to explore which method of standardization/harmonization works best

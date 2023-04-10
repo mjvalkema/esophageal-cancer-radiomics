@@ -1,5 +1,5 @@
 # Data preparation script: conbining development cohort with external validation cohort
-# Authors: M.J. Valkema, L.R. de Ruiter, June 2022
+# Authors: M.J. Valkema, L.R. de Ruiter, written June 2022, edited March 2023
 
 ################# Initialization ###################
 rm(list=ls()) # clear global environment
@@ -85,12 +85,16 @@ dataClean <- dataClean[,!(names(dataClean) %in% avg)]
 
 features <- dataClean
 
-clinical <- read.csv(file="data/PET_post_nCRT/clinical_post.csv",header=TRUE)
+clinical <- read.csv(file="data/PET_post_nCRT/clinical_post.csv", header=TRUE, sep = ";")
 clinical$Manufacturer <- car::recode(clinical$Manufacturer, "c('GE MEDICAL SYSTEMS')='GE' ; c('Philips Medical Systems')='Philips' ; c('SIEMENS')='Siemens'")
 clinical$ManufacturerModelName <- car::recode(clinical$ManufacturerModelName, "c('Biograph40_mCT')='Biograph 40_mCT' ; c('Biograph128_mCT')='Biograph 128_mCT'")
 clinical$TRG1_TRG234 <- apply(clinical$TRG %o% 1, 1, CreateTarget, c(1), c(2,3,4))
 clinical$outcome <- as.factor(clinical$TRG1_TRG234)
 clinical$outcome <- car::recode(clinical$TRG1_TRG234, "c(0)='TRG 1'; c(1)='TRG 2-3-4'")
+
+clinical$date_PET <- as.Date(clinical$date_PET, format = '%d/%m/%Y')
+clinical$date_last_nCRT <- as.Date(clinical$date_last_nCRT, format = '%d/%m/%Y')
+clinical$interval_scan_nCRT <- as.numeric(difftime(clinical$date_PET, clinical$date_last_nCRT)/7)
 
 metadata <- read.csv(file="data/PET_post_nCRT/metadata_scans_PET_post_withMBq.csv",header=TRUE)
 metadata <- subset(metadata, select=c("PatientID", "MBq", "PixelSize"))

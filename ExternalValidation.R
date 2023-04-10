@@ -1,9 +1,9 @@
 # External validation script
-# Authors: M.J. Valkema, L.R. de Ruiter, June 2022
+# Authors: M.J. Valkema, L.R. de Ruiter, written June 2022, edited March 2023
 
 ################# Initialization ###################
 setwd(dir=getwd())
-source('DataPrepExtVal.R') # use script DataPrepExtVal to get the  dataset dataAll: 
+source('DataPrepExtVal.R') # use script DataPrepExtVal to get the  dataset dataAll 
 library(rms) # to create calibration
 library(devtools)
 require(devtools)
@@ -22,7 +22,7 @@ tableBl <- CreateTableOne(vars = baselineVars, factorVars = catVars, data = data
                           testApprox = chisq.test)
 tableBl <- print(tableBl, nonnormal = "Age", quote = FALSE, noSpaces = TRUE)
 write.csv(tableBl, file = "output_extval/tableOne.csv")
-# Dubbel check statistical tests
+# Check statistical tests
 chisq.test(table(dataAll$Gender, dataAll$id))
 wilcox.test(Age ~ id, data = dataAll)
 chisq.test(table(dataAll$Histology, dataAll$id))
@@ -33,6 +33,10 @@ chisq.test(table(dataAll$outcome, dataAll$id))
 prop.test(x = c(9, 28), n = c(64, 141))
 # Comparison of proportion patients with TRG 1 out of patients with cT1-2 for development and ext. validation cohort respectively
 prop.test(x = c(7, 12), n = c(9, 41))
+
+# Describe timing of scans in external validation cohort
+summary(dataAll[dataAll$id == "External validation cohort",]$interval_scan_nCRT) # timing of the scan in the entire external validation cohort
+dataAll$extval_8wk_scan <- ifelse(dataAll$interval_scan_nCRT < 8, 1, 0) # subgroup of patients with a scan until 8 wks
 
 # Describe scan parameters for the external validation cohort
 tableScannerTypes <- table(dataAll$ManufacturerModelName, dataAll$Manufacturer)
