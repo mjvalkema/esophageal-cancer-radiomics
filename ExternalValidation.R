@@ -7,7 +7,7 @@ source('DataPrepExtVal.R') # use script DataPrepExtVal to get the  dataset dataA
 library(rms) # to create calibration
 library(devtools)
 require(devtools)
-library(sva)
+#library(sva)
 library(dplyr)
 library(ggplot2)
 library(ggpubr) # for function ggarrange
@@ -325,43 +325,43 @@ tabelSum4[is.num] <- lapply(tabelSum4[is.num], round, 2)
 write.csv(tabelSum4, file = "output_extval/tabelSum4_extvalcohort_onlyAC.csv")
 
 # Make ROCs in one figure for development cohort en external validation cohort (+ Siemens and AC at bottom script, Supplementary Material)
-png(filename = "figures_extval/ROCs_develop_extval.png", units = "cm", width=22, height=17, res=600)
-par(mfrow = c(2, 3))
+png(filename = "figures_extval/ROCs_develop_extval.png", units = "cm", width=14, height=24, res=900)
+par(mfrow = c(3, 2))
 ROCPlot(model_data1$probabilityA, model_data1$TRG1_TRG234, col=colors[1], main = "A")
 ROCPlot(model_data2$probabilityA, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[1]), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[1])), 
+       legend = c(paste("Development,", "AUC:", tabelSum1[tabelSum1$model=="A",]$AUC[1]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2[tabelSum2$model=="A",]$AUC[1])),
        col = colors, lty = 1)
 ROCPlot(model_data1$probabilityB, model_data1$TRG1_TRG234, col=colors[1], main = "B")
 ROCPlot(model_data2$probabilityB, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[2]), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[2])), 
+       legend = c(paste("Development,", "AUC:", tabelSum1[tabelSum1$model=="B",]$AUC[2]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2[tabelSum2$model=="B",]$AUC[2])),
        col = colors, lty = 1)
 ROCPlot(model_data1$probabilityC, model_data1$TRG1_TRG234, col=colors[1], main = "C")
 ROCPlot(model_data2$probabilityC, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[3]), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[3])), 
+       legend = c(paste("Development,", "AUC:", tabelSum1[tabelSum1$model=="C",]$AUC[3]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2[tabelSum2$model=="C",]$AUC[3])),
        col = colors, lty = 1)
 ROCPlot(model_data1$probabilityD, model_data1$TRG1_TRG234, col=colors[1], main = "D")
 ROCPlot(model_data2$probabilityD, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[4]), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[4])), 
+       legend = c(paste("Development,", "AUC:", tabelSum1[tabelSum1$model=="D",]$AUC[4]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2[tabelSum2$model=="D",]$AUC[4])),
        col = colors, lty = 1)
 ROCPlot(model_data1$probabilityE, model_data1$TRG1_TRG234, col=colors[1], main = "E")
 ROCPlot(model_data2$probabilityE, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[5]), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[5])), 
+       legend = c(paste("Development,", "AUC:", tabelSum1[tabelSum1$model=="E",]$AUC[5]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2[tabelSum2$model=="E",]$AUC[5])),
        col = colors, lty = 1)
 ROCPlot(model_data1$probabilityF, model_data1$TRG1_TRG234, col=colors[1], main = "F")
 ROCPlot(model_data2$probabilityF, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[6]), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[6])), 
+       legend = c(paste("Development,", "AUC:", tabelSum1[tabelSum1$model=="F",]$AUC[6]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2[tabelSum2$model=="F",]$AUC[6])),
        col = colors, lty = 1)
 
 dev.off()
@@ -473,67 +473,67 @@ table(model_data2$probabilityF > 0.9, model_data2$cT)
 # ROCs with the three model_data's, development cohort, external validation cohort, external validation cohort of one vendor,
 # and external validation cohort only adenocarcinoma patients
 # Make ROCs in one figure
-png(filename = "figures_extval/ROCs_subgroups.png", units = "cm", width=26, height=17, res=900)
-par(mfrow = c(2, 3))
+png(filename = "figures_extval/ROCs_subgroups.png", units = "cm", width=17, height=24, res=900)
+par(mfrow = c(3, 2))
 ROCPlot(model_data1$probabilityA, model_data1$TRG1_TRG234, col=colors[1], main = "A")
 ROCPlot(model_data2$probabilityA, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 ROCPlot(model_data3$probabilityA, model_data3$TRG1_TRG234, col=colors[3], add = TRUE)
 ROCPlot(model_data4$probabilityA, model_data4$TRG1_TRG234, col=colors[4], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[1]), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[1]), 
-                  paste("Ext.val., one vendor,", "AUC:", tabelSum3$AUC[1]),
-                  paste("Ext.val., adeno.,", "AUC:", tabelSum4$AUC[1])), 
+       legend = c(paste("Development,", "AUC:", tabelSum1[tabelSum1$model=="A",]$AUC[1]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2[tabelSum2$model=="A",]$AUC[1]), 
+                  paste("Ext.val., one vendor,", "AUC:", tabelSum3[tabelSum3$model=="A",]$AUC[1]),
+                  paste("Ext.val., adeno.,", "AUC:", tabelSum4[tabelSum4$model=="A",]$AUC[1])), 
        col = colors, lty = 1)
 ROCPlot(model_data1$probabilityB, model_data1$TRG1_TRG234, col=colors[1], main = "B")
 ROCPlot(model_data2$probabilityB, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 ROCPlot(model_data3$probabilityB, model_data3$TRG1_TRG234, col=colors[3], add = TRUE)
 ROCPlot(model_data4$probabilityB, model_data4$TRG1_TRG234, col=colors[4], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[2]), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[2]), 
-                  paste("Ext.val., one vendor,", "AUC:", tabelSum3$AUC[2]),
-                  paste("Ext.val., adeno.,", "AUC:", tabelSum4$AUC[2])), 
+       legend = c(paste("Development,", "AUC:", tabelSum1[tabelSum1$model=="B",]$AUC[1]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2[tabelSum2$model=="B",]$AUC[1]), 
+                  paste("Ext.val., one vendor,", "AUC:", tabelSum3[tabelSum3$model=="B",]$AUC[1]),
+                  paste("Ext.val., adeno.,", "AUC:", tabelSum4[tabelSum4$model=="B",]$AUC[1])), 
        col = colors, lty = 1)
 ROCPlot(model_data1$probabilityC, model_data1$TRG1_TRG234, col=colors[1], main = "C")
 ROCPlot(model_data2$probabilityC, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 ROCPlot(model_data3$probabilityC, model_data3$TRG1_TRG234, col=colors[3], add = TRUE)
 ROCPlot(model_data4$probabilityC, model_data4$TRG1_TRG234, col=colors[4], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[3]), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[3]), 
-                  paste("Ext.val., one vendor,", "AUC:", tabelSum3$AUC[3]),
-                  paste("Ext.val., adeno.,", "AUC:", tabelSum4$AUC[3])), 
+       legend = c(paste("Development,", "AUC:", tabelSum1[tabelSum1$model=="C",]$AUC[1]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2[tabelSum2$model=="C",]$AUC[1]), 
+                  paste("Ext.val., one vendor,", "AUC:", tabelSum3[tabelSum3$model=="C",]$AUC[1]),
+                  paste("Ext.val., adeno.,", "AUC:", tabelSum4[tabelSum4$model=="C",]$AUC[1])), 
        col = colors, lty = 1)
 ROCPlot(model_data1$probabilityD, model_data1$TRG1_TRG234, col=colors[1], main = "D")
 ROCPlot(model_data2$probabilityD, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 ROCPlot(model_data3$probabilityD, model_data3$TRG1_TRG234, col=colors[3], add = TRUE)
 ROCPlot(model_data4$probabilityD, model_data4$TRG1_TRG234, col=colors[4], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[4]), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[4]), 
-                  paste("Ext.val., one vendor,", "AUC:", tabelSum3$AUC[4]),
-                  paste("Ext.val., adeno.,", "AUC:", tabelSum4$AUC[4])), 
+       legend = c(paste("Development,", "AUC:", tabelSum1[tabelSum1$model=="D",]$AUC[1]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2[tabelSum2$model=="D",]$AUC[1]), 
+                  paste("Ext.val., one vendor,", "AUC:", tabelSum3[tabelSum3$model=="D",]$AUC[1]),
+                  paste("Ext.val., adeno.,", "AUC:", tabelSum4[tabelSum4$model=="D",]$AUC[1])), 
        col = colors, lty = 1)
 ROCPlot(model_data1$probabilityE, model_data1$TRG1_TRG234, col=colors[1], main = "E")
 ROCPlot(model_data2$probabilityE, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 ROCPlot(model_data3$probabilityE, model_data3$TRG1_TRG234, col=colors[3], add = TRUE)
 ROCPlot(model_data4$probabilityE, model_data4$TRG1_TRG234, col=colors[4], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[5]), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[5]), 
-                  paste("Ext.val., one vendor,", "AUC:", tabelSum3$AUC[5]),
-                  paste("Ext.val., adeno.,", "AUC:", tabelSum4$AUC[5])), 
+       legend = c(paste("Development,", "AUC:", tabelSum1[tabelSum1$model=="E",]$AUC[1]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2[tabelSum2$model=="E",]$AUC[1]), 
+                  paste("Ext.val., one vendor,", "AUC:", tabelSum3[tabelSum3$model=="E",]$AUC[1]),
+                  paste("Ext.val., adeno.,", "AUC:", tabelSum4[tabelSum4$model=="E",]$AUC[1])), 
        col = colors, lty = 1)
 ROCPlot(model_data1$probabilityF, model_data1$TRG1_TRG234, col=colors[1], main = "F")
 ROCPlot(model_data2$probabilityF, model_data2$TRG1_TRG234, col=colors[2], add = TRUE)
 ROCPlot(model_data3$probabilityF, model_data3$TRG1_TRG234, col=colors[3], add = TRUE)
 ROCPlot(model_data4$probabilityF, model_data4$TRG1_TRG234, col=colors[4], add = TRUE)
 legend("bottomright", 
-       legend = c(paste("Development,", "AUC:", tabelSum1$AUC[6]), 
-                  paste("Ext.val.,", "AUC:", tabelSum2$AUC[6]), 
-                  paste("Ext.val., one vendor,", "AUC:", tabelSum3$AUC[6]),
-                  paste("Ext.val., adeno.,", "AUC:", tabelSum4$AUC[6])), 
+       legend = c(paste("Development,", "AUC:", tabelSum1[tabelSum1$model=="F",]$AUC[1]), 
+                  paste("Ext.val.,", "AUC:", tabelSum2[tabelSum2$model=="F",]$AUC[1]), 
+                  paste("Ext.val., one vendor,", "AUC:", tabelSum3[tabelSum3$model=="F",]$AUC[1]),
+                  paste("Ext.val., adeno.,", "AUC:", tabelSum4[tabelSum4$model=="F",]$AUC[1])), 
        col = colors, lty = 1)
 dev.off()
 dev.off()
